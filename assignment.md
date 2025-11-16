@@ -1,59 +1,130 @@
-# Intern Assignment: Contextual Image Service for AI Tutor
+# Intern Assignment: AI Tutor Chatbot with Contextual Images
 
 ## Goal
-Add a contextual image service to an existing AI tutoring flow so that when the AI tutor (voice/text) mentions a concept, the UI displays relevant educational images (diagrams/illustrations) alongside the transcript. The assignment is intentionally standalone — candidates should not need access to the full repo. The output should be a self-contained service and integration guide that can be integrated into the AI tutor later.
+Build a **mini AI tutor chatbot** that:
+1. Accepts a topic PDF upload (e.g., a chapter on "Production of Sound")
+2. Uses an LLM to explain concepts from the PDF in a pedagogical, conversational way
+3. Automatically displays relevant educational images (diagrams/illustrations) as the AI explains concepts
+4. Allows users to ask follow-up questions and continue the learning conversation
+
+This is a **standalone, testable project** — candidates don't need access to our full codebase. The deliverable is a working chatbot with UI that demonstrates contextual image integration with LLM-driven explanations.
 
 ## High-level requirements (must-have)
-- Implement a small image metadata service (REST API) that stores and serves image metadata and static image files (or URLs).
-- Provide an integration guide and sample code showing how the AI tutoring frontend can:
-  - Augment the system prompt with the topic's image context
-  - Detect when the AI mentions a concept and request/show a relevant image
-  - Support two detection modes: fast keyword detection (client-side) and an explicit function-call style (AI signals image request)
-- Deliverables: GitHub repo, deployed service (free tier), README, sample prompt templates, sample image metadata JSON, and a short demo video (2–4 min).
+1. **PDF Upload & Extraction**: User uploads a chapter PDF → Extract text content
+2. **LLM Integration**: Use an LLM (OpenAI/Gemini/Groq free tier) to explain the topic conversationally
+3. **Image Metadata System**: Store 4-8 images per topic with metadata (title, keywords, description)
+4. **Contextual Image Display**: As the AI explains, automatically show relevant images based on keyword matching or LLM function calls
+5. **Chat Interface**: Simple chat UI where users can ask follow-up questions
+6. **Deliverables**: Working chatbot (deployed or local), GitHub repo, sample PDF + images, demo video (3-5 min)
+
+## Why This Assignment?
+This tests the exact skills we need:
+- ✅ LLM prompt engineering (pedagogical explanations)
+- ✅ PDF text extraction and chunking
+- ✅ Contextual image detection and display
+- ✅ Clean UI/UX for learning experiences
+- ✅ End-to-end integration (fully testable)
 
 ## Audience & Constraints
-- Candidates won't have access to your full repo or API keys. Build a standalone microservice that can be integrated later.
-- Use only free-tier services for hosting/storage (Railway, Render, Vercel, Supabase free storage, Cloudinary free). Local filesystem for images is acceptable for demo but show how to swap to cloud storage.
+- Candidates build this from scratch — no access to our repo or API keys
+- Use **free-tier services**: OpenAI free credits, Gemini API (free tier), Groq (free), Vercel/Railway/Render hosting
+- Keep it simple: A single-page chat UI is fine (no fancy auth or database required)
 
-## Minimal API Specification
-(Expose these endpoints — simple JSON + static files)
+## Complete User Flow
 
-1. GET /topics/:topicId/images
-- Returns all images for a topic with metadata
-- Response example:
-```json
-[{
-  "id": "img_001",
-  "url": "https://.../SchoolBellVibration.png",
-  "title": "School Bell Vibration",
-  "description": "Bell struck by hammer showing vibration and sound waves",
-  "keywords": ["bell","hammer","vibration","sound waves"],
-  "display_order": 1
-}]
+```
+1. User uploads chapter PDF (e.g., "Sound - Class 8 Science Chapter")
+   ↓
+2. Backend extracts text from PDF
+   ↓
+3. User clicks "Start Learning" → Chat interface opens
+   ↓
+4. AI tutor introduces the topic: "Hi! Let's learn about sound production. When you strike a bell with a hammer..."
+   ↓
+5. [Image automatically appears] → "School Bell Vibration" diagram shows up next to the explanation
+   ↓
+6. User asks: "How do vocal cords produce sound?"
+   ↓
+7. AI explains vocal cords → [Image appears] → "Human Larynx Diagram"
+   ↓
+8. Conversation continues with contextual images appearing as concepts are explained
 ```
 
-2. GET /images/:imageId
-- Returns image file or 302 redirect to hosted URL
+## Technical Architecture (What to Build)
 
-3. POST /images (admin)
-- Upload an image and metadata (multipart/form-data)
-- For the assignment a simple in-memory or file-based store is fine
+### 1. Backend (Flask/FastAPI recommended)
+- **POST /upload**: Accepts PDF file → Extract text → Return topic_id
+- **POST /chat**: Accepts { topic_id, user_message } → Calls LLM → Returns AI response
+- **GET /images/:topic_id**: Returns all available images for the topic
+- **Static /images/**: Serves image files
 
-4. GET /images/:imageId/metadata
-- Returns the single image metadata JSON
+### 2. Image Metadata System
+Store images with metadata in a simple JSON file or in-memory structure:
+```json
+{
+  "topic": "Production of Sound",
+  "images": [
+    {
+      "id": "img_001",
+      "filename": "school_bell_vibration.png",
+      "title": "School Bell Vibration",
+      "description": "Bell struck by hammer showing vibration and sound waves",
+      "keywords": ["bell", "hammer", "vibration", "sound waves", "strike"],
+      "display_order": 1
+    },
+    {
+      "id": "img_002",
+      "filename": "rubber_band_vibration.png",
+      "title": "Rubber Band Vibration",
+      "description": "Stretched rubber band producing sound when plucked",
+      "keywords": ["rubber band", "pluck", "vibration", "stretched", "elasticity"],
+      "display_order": 2
+    }
+  ]
+}
+```
 
-5. (Optional) POST /search
-- Accepts a short text or keywords, returns best-matching image(s)
+### 3. Frontend (Simple HTML/JS or React)
+- **Upload Section**: Drag-drop or file input for PDF
+- **Chat Interface**: 
+  - Message bubbles (user + AI)
+  - Image cards that appear inline with AI responses
+  - Input box for follow-up questions
+- **Image Display**: Show image with title when detected (max 1-2 images per response to avoid clutter)
 
-## Candidate Tasks (deliver these)
-1. Implement the API above (any stack: Node/Express, FastAPI, or simple Flask). Keep the code small and documented.
-2. Provide a `sample-images/` folder with 4-8 images and metadata for one topic (e.g., "Production of Sound"). Include the metadata JSON file.
-3. Provide a short integration guide (README) showing how a front-end AI tutor would use the service in two ways:
-   - Prompt augmentation: include the output of `GET /topics/:topicId/images` in the system prompt so the LLM knows the visual aids available for the topic.
-   - Real-time detection: on every AI response, run a detection routine (client-side) that scans the AI transcript for keywords from the metadata and shows a matching image. Also include a function-call style example where the AI returns a special token or JSON snippet to request an image explicitly (simulate if using a model without function-calling).
-4. Provide sample prompt snippets to add to the AI system prompt (see "Prompt Examples" below).
-5. Deploy the service to a free tier (Railway, Render, Vercel) or provide clear steps to run locally with sample cURL requests.
-6. Provide a 2–4 minute demo video showing: upload (if implemented), listing topic images, and simulating the AI response detection flow that shows images.
+## What Candidates Must Build
+
+### Core Deliverables:
+1. **Working Chatbot Application**:
+   - Backend API (Flask/FastAPI/Express)
+   - Simple frontend UI (HTML+JS or React — keep it minimal)
+   - PDF text extraction (PyPDF2, pdfplumber, or pdf-parse)
+   - LLM integration (OpenAI, Gemini, or Groq API)
+   - Image detection and display logic
+
+2. **Sample Content**:
+   - 1 sample PDF (we'll provide OR they find a NCERT chapter PDF)
+   - 4-8 images for the topic with metadata JSON
+   - Images should be educational diagrams/illustrations (can source from open education resources)
+
+3. **Image Detection Strategy** (pick one or both):
+   - **Keyword Matching**: Scan AI response for keywords from metadata → Show matching image
+   - **LLM Function Calling**: Use OpenAI function calls or structured output to explicitly request images
+
+4. **README with**:
+   - Setup instructions (how to run locally)
+   - LLM prompt design (how you instructed the AI to be pedagogical + mention concepts)
+   - Image detection explanation (how you decide which image to show)
+   - Sample conversation flow
+
+5. **Demo Video (3-5 min)**:
+   - Upload a PDF
+   - Start a chat → Show AI explaining with images appearing contextually
+   - Ask 2-3 follow-up questions
+   - Explain your detection strategy briefly
+
+6. **Deployment** (optional but preferred):
+   - Deploy to Vercel/Railway/Render OR provide clear local run steps
 
 ## Integration Design Notes (what we expect)
 Candidates should explain and demonstrate the following approaches. You don't have to implement both fully, but explain both and implement at least one:
